@@ -1,0 +1,76 @@
+<?php
+
+namespace ShowSuite\Http\Controllers\API\Amp;
+
+use ShowSuite\Helpers\SSResponse;
+
+use ShowSuite\Http\Controllers\BaseController;
+use ShowSuite\Http\Requests\AmpProfileRequest;
+use ShowSuite\Models\Eloquent\Amp;
+use ShowSuite\Models\Eloquent\AmpProfile;
+use ShowSuite\Models\Eloquent\Permission;
+use ShowSuite\Models\Fields\AmpProfileFields;
+
+
+class AmpProfileController extends BaseController
+{
+    /**
+     * @var ampService
+     * */
+    private $ampService;
+
+
+
+    public function __construct(
+
+    )
+    {
+
+    }
+
+
+    /**
+     * Returns the amp object including profile data
+     * @return mixed
+     */
+    public function get()
+    {
+        $user = getAPIUser();
+        $this->hasUserPermission($user, 'AMP_VIEW_MY_PROFILE');
+        $amp = $user->getAmp();
+
+        $amp->loadField('profile');
+
+        $data = [
+            "amp" => $amp
+        ];
+
+        return SSResponse::getJsonResponse(true, 200, $data);
+    }
+
+    /**
+     * Updates Amp including profile data
+     * @param AmpProfileRequest $request
+     * @return mixed
+     */
+    public function put(AmpProfileRequest $request)
+    {
+        $user = getAPIUser();
+        $this->hasUserPermission($user, 'AMP_EDIT_MY_PROFILE');
+        $amp = $user->getamp();
+        if($amp){
+            $amp->update($amp, $request->getAmpParams());
+        }
+        if ($amp->profile) {
+            $this->ampService->update($amp->profile, $request->getProfileParams());
+        } else {
+            AmpProfile::create($request->getProfileParams() + [
+                    AmpProfileFields::amp_ID => $amp->id,
+                ]);
+        }
+
+        return $this->get();
+    }
+
+    //-------------------------------------------
+}
